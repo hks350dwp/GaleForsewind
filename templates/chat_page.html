@@ -1,0 +1,85 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Page</title>
+    <link rel="stylesheet" href="{% static 'css/fontawesome-all.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <link rel="stylesheet" href="{% static 'css/noscript.css' %}">
+
+</head>
+<body>
+    <div id="main">
+{% csrf_token %}
+        <div id="col-6 col-12-xsmall"><div id="messages"></div>
+        <input type="text" id="user-input" placeholder="Type your message here...">
+          <button class="button primary" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+<script>
+    function sendMessage() {
+        const userInput = document.getElementById('user-input').value;  // Define userInput
+        const messagesDiv = document.getElementById('messages');
+        const csrfElement = document.querySelector('[name=csrfmiddlewaretoken]');
+        const csrfToken = csrfElement ? csrfElement.value : null;  // Get CSRF token safely
+   
+        if (userInput===""){
+           console.error('Blank query not accepted');
+           return;
+        }        
+
+        if (!csrfToken) {
+            console.error('CSRF token not found');
+            return;  // Exit the function if CSRF token is not found
+        }
+        
+        messagesDiv.innerHTML += `<h2>${userInput}</h2>`;
+        messagesDiv.innerHTML += `<p>Retrieving...</p>`; 
+        
+        fetch('/api_proxy/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrfToken
+            },
+            body: `user_prompt=${encodeURIComponent(userInput)}`,
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok: ' + response.statusText);
+            }
+            return response.json();
+        })
+        .then(data => {
+            messagesDiv.innerHTML = messagesDiv.innerHTML.replace('<p>Retrieving...</p>', '');
+            const responseData = JSON.parse(data.response);  // Parse the JSON string to an object
+            const answerText = responseData.Answer.replace(/\n/g, '<br>');  // Replace newline characters with <br>
+            messagesDiv.innerHTML += `<p>${answerText}</p>`;  // Insert answer into DOM as HTML
+
+            // Check if Sources exist and is an array
+            if (responseData.Sources && Array.isArray(responseData.Sources)) {
+                let sourcesList = '<b>Sources:</b>';
+                responseData.Sources.forEach(source => {
+                   sourcesList += `<p class="source-text"><i>${source}</i></p>`; // Added class "source-text"
+
+                });
+                sourcesList += '</p>';
+                messagesDiv.innerHTML += sourcesList;  // Add sources list to messagesDiv
+            }
+
+
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            messagesDiv.innerHTML += `<p>Error occurred while fetching response</p>`;
+        });
+
+        document.getElementById('user-input').value = '';  // Clear the input field
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,9 @@
+.source-title {
+    font-size: 1em;
+    font-weight: bold;
+}
+
+.source-text {
+    font-size: 0.8em;  // Adjust size as needed
+    color: grey;       // You can set a different text color or any other style
+}
